@@ -129,16 +129,16 @@ protocol CocoaMQTTClient {
 /**
  * MQTT Reader Delegate
  */
-protocol CocoaMQTTReaderDelegate: class {
-    func didReceiveConnAck(_ reader: CocoaMQTTReader, connack: UInt8)
-    func didReceivePublish(_ reader: CocoaMQTTReader, message: CocoaMQTTMessage, id: UInt16)
-    func didReceivePubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceivePubRec(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceivePubRel(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceivePubComp(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceiveSubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceiveUnsubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
-    func didReceivePong(_ reader: CocoaMQTTReader)
+@objc protocol CocoaMQTTReaderDelegate {
+    @objc func didReceiveConnAck(_ reader: CocoaMQTTReader, connack: UInt8)
+    @objc func didReceivePublish(_ reader: CocoaMQTTReader, message: CocoaMQTTMessage, id: UInt16)
+    @objc func didReceivePubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceivePubRec(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceivePubRel(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceivePubComp(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceiveSubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceiveUnsubAck(_ reader: CocoaMQTTReader, msgid: UInt16)
+    @objc func didReceivePong(_ reader: CocoaMQTTReader)
 }
 
 extension Int {
@@ -598,7 +598,7 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
     }
 }
 
-class CocoaMQTTReader {
+@objc class CocoaMQTTReader: NSObject {
     private var socket: GCDAsyncSocket
     private var header: UInt8 = 0
     private var length: UInt = 0
