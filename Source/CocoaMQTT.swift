@@ -529,19 +529,19 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
     
     func didReceivePubRec(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBREC Received: \(msgid)")
-
+// if acting as a gateway, forward PUBREC to client
         puback(CocoaMQTTFrameType.pubrel, msgid: msgid)
     }
 
     func didReceivePubRel(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBREL Received: \(msgid)")
-
+// if acting as a gateway, forward PUBREL to client
         puback(CocoaMQTTFrameType.pubcomp, msgid: msgid)
     }
 
     func didReceivePubComp(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBCOMP Received: \(msgid)")
-
+// if acting as a gateway, forward PUBCOMP to client
         buffer.sendSuccess(withMsgid: msgid)
         delegate?.mqtt?(self, didPublishComplete: msgid)
         didCompletePublish(self, msgid)
