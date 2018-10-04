@@ -14,7 +14,7 @@ import Foundation
  */
 @objc open class CocoaMQTTMessage: NSObject {
     @objc open var qos = CocoaMQTTQOS.qos1
-    @objc var dup = false
+    @objc open var dup = false
 
     @objc open var topic: String
     @objc open var payload: [UInt8]
