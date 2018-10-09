@@ -292,6 +292,8 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 
         if descr != nil {
             printDebug("Send \(descr!), msgid: \(msgid)")
+        } else {
+            printDebug("Send puback, msgid: \(msgid)")
         }
 
         send(CocoaMQTTFramePubAck(type: type, msgid: msgid))
@@ -731,7 +733,7 @@ public class CocoaMQTTLogger: NSObject {
     private override init() {}
     
     // min level
-    public var minLevel: CocoaMQTTLoggerLevel = .warning
+    public var minLevel: CocoaMQTTLoggerLevel = .debug
     
     // logs
     func log(level: CocoaMQTTLoggerLevel, message: String) {
