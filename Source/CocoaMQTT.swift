@@ -91,6 +91,8 @@ fileprivate enum CocoaMQTTReadTag: Int {
     @objc func mqtt(_ mqtt: CocoaMQTT, didConnectAck ack: CocoaMQTTConnAck)
     @objc func mqtt(_ mqtt: CocoaMQTT, didPublishMessage message: CocoaMQTTMessage, id: UInt16)
     @objc func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishRec id: UInt16)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishRel id: UInt16)
     @objc func mqtt(_ mqtt: CocoaMQTT, didReceiveMessage message: CocoaMQTTMessage, id: UInt16 )
     @objc func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopic topic: String)
     @objc func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopic topic: String)
@@ -123,7 +125,10 @@ protocol CocoaMQTTClient {
     func unsubscribe(_ topic: String) -> UInt16
     func publish(_ topic: String, withString string: String, qos: CocoaMQTTQOS, retained: Bool, dup: Bool) -> UInt16
     func publish(_ message: CocoaMQTTMessage) -> UInt16
-    
+    func completePublish(_ msgid: UInt16)
+    func sendPubRec(_ msgid: UInt16)
+    func sendPubRel(_ msgid: UInt16)
+
 }
 
 /**
@@ -158,6 +163,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc open var clientID: String
     @objc open var username: String?
     @objc open var password: String?
+    @objc open var isGateway = false
     @objc open var secureMQTT = false
     @objc open var cleanSession = true
     @objc open var willMessage: CocoaMQTTWill?
@@ -223,6 +229,8 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     open var didConnectAck: (CocoaMQTT, CocoaMQTTConnAck) -> Void = { _, _ in }
     open var didPublishMessage: (CocoaMQTT, CocoaMQTTMessage, UInt16) -> Void = { _, _, _ in }
     open var didPublishAck: (CocoaMQTT, UInt16) -> Void = { _, _ in }
+    open var didPublishRel: (CocoaMQTT, UInt16) -> Void = { _, _ in }
+    open var didPublishRec: (CocoaMQTT, UInt16) -> Void = { _, _ in }
     open var didReceiveMessage: (CocoaMQTT, CocoaMQTTMessage, UInt16) -> Void = { _, _, _ in }
     open var didSubscribeTopic: (CocoaMQTT, String) -> Void = { _, _ in }
     open var didUnsubscribeTopic: (CocoaMQTT, String) -> Void = { _, _ in }
@@ -240,8 +248,10 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         self.clientID = clientID
         self.host = host
         self.port = port
+
         super.init()
         buffer.delegate = self
+//        self.logLevel = .debug
     }
     
     deinit {
@@ -385,6 +395,22 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         send(frame, tag: Int(msgid))
         return msgid
     }
+
+    @objc
+    open func completePublish(_ msgid: UInt16) {
+        puback(CocoaMQTTFrameType.pubcomp, msgid: msgid)
+    }
+    
+    @objc
+    open func sendPubRec(_ msgid: UInt16) {
+        puback(CocoaMQTTFrameType.pubrec, msgid: msgid)
+    }
+
+    @objc
+    open func sendPubRel(_ msgid: UInt16) {
+        puback(CocoaMQTTFrameType.pubrel, msgid: msgid)
+    }
+
 }
 
 // MARK: - GCDAsyncSocketDelegate
@@ -513,11 +539,12 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         
         delegate?.mqtt(self, didReceiveMessage: message, id: id)
         didReceiveMessage(self, message, id)
-        
-        if message.qos == CocoaMQTTQOS.qos1 {
-            puback(CocoaMQTTFrameType.puback, msgid: id)
-        } else if message.qos == CocoaMQTTQOS.qos2 {
-            puback(CocoaMQTTFrameType.pubrec, msgid: id)
+        if !isGateway {
+            if message.qos == CocoaMQTTQOS.qos1 {
+                puback(CocoaMQTTFrameType.puback, msgid: id)
+            } else if message.qos == CocoaMQTTQOS.qos2 {
+                puback(CocoaMQTTFrameType.pubrec, msgid: id)
+            }
         }
     }
 
@@ -532,13 +559,23 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
     func didReceivePubRec(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBREC Received: \(msgid)")
 // if acting as a gateway, forward PUBREC to client
-        puback(CocoaMQTTFrameType.pubrel, msgid: msgid)
+        if(isGateway){
+            delegate?.mqtt(self, didPublishRec: msgid)
+            didPublishRec(self,msgid)
+        } else {
+            puback(CocoaMQTTFrameType.pubrel, msgid: msgid)
+        }
     }
 
     func didReceivePubRel(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBREL Received: \(msgid)")
 // if acting as a gateway, forward PUBREL to client
-        puback(CocoaMQTTFrameType.pubcomp, msgid: msgid)
+        if isGateway {
+            delegate?.mqtt(self, didPublishRel: msgid)
+            didPublishRel(self, msgid)
+        } else {
+            puback(CocoaMQTTFrameType.pubcomp, msgid: msgid)
+        }
     }
 
     func didReceivePubComp(_ reader: CocoaMQTTReader, msgid: UInt16) {
