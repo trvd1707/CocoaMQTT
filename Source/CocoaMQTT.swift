@@ -248,10 +248,9 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         self.clientID = clientID
         self.host = host
         self.port = port
-
         super.init()
         buffer.delegate = self
-//        self.logLevel = .debug
+        NSLog("Loglevel = \(self.logLevel)")
     }
     
     deinit {
