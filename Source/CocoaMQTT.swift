@@ -91,8 +91,8 @@ fileprivate enum CocoaMQTTReadTag: Int {
     @objc func mqtt(_ mqtt: CocoaMQTT, didConnectAck ack: CocoaMQTTConnAck)
     @objc func mqtt(_ mqtt: CocoaMQTT, didPublishMessage message: CocoaMQTTMessage, id: UInt16)
     @objc func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16)
-    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishRec id: UInt16)
-    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishRel id: UInt16)
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRec id: UInt16)
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRel id: UInt16)
     @objc func mqtt(_ mqtt: CocoaMQTT, didReceiveMessage message: CocoaMQTTMessage, id: UInt16 )
     @objc func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopic topic: String)
     @objc func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopic topic: String)
@@ -559,7 +559,7 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         printDebug("PUBREC Received: \(msgid)")
 // if acting as a gateway, forward PUBREC to client
         if(isGateway){
-            delegate?.mqtt(self, didPublishRec: msgid)
+            delegate?.mqtt?(self, didPublishRec: msgid)
             didPublishRec(self,msgid)
         } else {
             puback(CocoaMQTTFrameType.pubrel, msgid: msgid)
@@ -570,7 +570,7 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         printDebug("PUBREL Received: \(msgid)")
 // if acting as a gateway, forward PUBREL to client
         if isGateway {
-            delegate?.mqtt(self, didPublishRel: msgid)
+            delegate?.mqtt?(self, didPublishRel: msgid)
             didPublishRel(self, msgid)
         } else {
             puback(CocoaMQTTFrameType.pubcomp, msgid: msgid)
