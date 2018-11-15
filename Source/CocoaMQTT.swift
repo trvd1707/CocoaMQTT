@@ -473,6 +473,8 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
     public func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
         socket.delegate = nil
         connState = .disconnected
+        printDebug("error conecting")
+        printDebug(err.debugDescription)
         delegate?.mqttDidDisconnect(self, withError: err)
         didDisconnect(self, err)
 
