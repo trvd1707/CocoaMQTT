@@ -209,11 +209,14 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
             CocoaMQTTLogger.logger.minLevel = newValue
         }
     }
-    
+    @objc open func startDebugLog() {
+        logLevel = .debug
+        NSLog("Starting CocoaMQTTLoglevel = \(self.logLevel)")
+    }
     // ssl
     @objc open var enableSSL = false
     @objc open var sslSettings: [String: NSObject]?
-    open var allowUntrustCACertificate = false
+    @objc open var allowUntrustCACertificate = false
     
     // subscribed topics. (dictionary structure -> [msgid: [topicString: QoS]])
     open var subscriptions: [UInt16: [String: CocoaMQTTQOS]] = [:]
@@ -250,7 +253,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         self.port = port
         super.init()
         buffer.delegate = self
-        NSLog("Loglevel = \(self.logLevel)")
+        NSLog("CocoaMQTTLoglevel = \(self.logLevel)")
     }
     
     deinit {
