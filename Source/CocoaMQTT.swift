@@ -476,7 +476,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
     public func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
         socket.delegate = nil
         connState = .disconnected
-        printDebug("error conecting")
+        printDebug("error conecting to \(host)")
         printDebug(err.debugDescription)
         delegate?.mqttDidDisconnect(self, withError: err)
         didDisconnect(self, err)
@@ -774,7 +774,7 @@ public class CocoaMQTTLogger: NSObject {
     private override init() {}
     
     // min level
-    public var minLevel: CocoaMQTTLoggerLevel = .error
+    public var minLevel: CocoaMQTTLoggerLevel = .debug
     
     // logs
     func log(level: CocoaMQTTLoggerLevel, message: String) {
