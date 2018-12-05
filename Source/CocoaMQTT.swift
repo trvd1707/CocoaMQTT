@@ -168,7 +168,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc open var cleanSession = true
     @objc open var willMessage: CocoaMQTTWill?
     @objc open weak var delegate: CocoaMQTTDelegate?
-    open var backgroundOnSocket = false
+    open var backgroundOnSocket = true
     open var dispatchQueue = DispatchQueue.main
     
     @objc open var connState = CocoaMQTTConnState.initial {
@@ -195,7 +195,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     fileprivate var aliveTimer: Timer?
     
     // auto reconnect
-    open var autoReconnect = false
+    @objc open var autoReconnect = false
     open var autoReconnectTimeInterval: UInt16 = 20
     fileprivate var autoReconnTimer: Timer?
     fileprivate var disconnectExpectedly = false
@@ -271,7 +271,9 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 
     fileprivate func send(_ frame: CocoaMQTTFrame, tag: Int = 0) {
         let data = frame.data()
-        socket.write(Data(bytes: data, count: data.count), withTimeout: -1, tag: tag)
+        if socket.isConnected {
+            socket.write(Data(bytes: data, count: data.count), withTimeout: 1000, tag: tag)
+        }
     }
 
     fileprivate func sendConnectFrame() {
@@ -366,13 +368,6 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 //        send(frame, tag: Int(msgid))
         _ = buffer.add(frame)
         
-        
-
-        if message.qos != CocoaMQTTQOS.qos0 {
-            
-        }
-        
-
         delegate?.mqtt(self, didPublishMessage: message, id: msgid)
         didPublishMessage(self, message, msgid)
         return msgid
@@ -422,7 +417,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
         
         #if TARGET_OS_IPHONE
             if backgroundOnSocket {
-                sock.performBlock { sock.enableBackgroundingOnSocket() }
+                sock.perform { sock.enableBackgroundingOnSocket() }
             }
         #endif
         
