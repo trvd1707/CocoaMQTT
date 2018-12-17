@@ -157,7 +157,8 @@ extension Int {
  * Notice: GCDAsyncSocket need delegate to extend NSObject
  */
 open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
-   @objc open var host = "localhost"
+
+    @objc open var host = "localhost"
     @objc open var port: UInt16 = 1883
     @objc open var clientID: String
     @objc open var username: String?
@@ -168,6 +169,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc open var willMessage: CocoaMQTTWill?
     @objc open weak var delegate: CocoaMQTTDelegate?
     @objc open var backgroundOnSocket = true
+
     open var dispatchQueue = DispatchQueue.main
     
     @objc open var connState = CocoaMQTTConnState.initial {
@@ -187,7 +189,6 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         get { return buffer.silosMaxNumber }
         set { buffer.silosMaxNumber = newValue }
     }
-    
     
     // heart beat
     @objc open var keepAlive: UInt16 = 60
@@ -355,13 +356,15 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc
     open func publish(_ message: CocoaMQTTMessage) -> UInt16 {
         let msgid: UInt16 = nextMessageID()
+        // XXX: qos0 should not take msgid
         let frame = CocoaMQTTFramePublish(msgid: msgid, topic: message.topic, payload: message.payload)
         frame.qos = message.qos.rawValue
         frame.retained = message.retained
         frame.dup = message.dup
-//        send(frame, tag: Int(msgid))
-        _ = buffer.add(frame)
         
+        // Push frame to sending queue
+        _ = buffer.add(frame)
+
         delegate?.mqtt(self, didPublishMessage: message, id: msgid)
         didPublishMessage(self, message, msgid)
         return msgid
@@ -409,7 +412,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
     public func socket(_ sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {
         printDebug("connected to \(host) : \(port)")
         
-        #if TARGET_OS_IPHONE
+        #if os(iOS)
             if backgroundOnSocket {
                 sock.perform { sock.enableBackgroundingOnSocket() }
             }
