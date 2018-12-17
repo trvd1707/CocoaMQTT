@@ -8,7 +8,6 @@
 
 import Foundation
 import CocoaAsyncSocket
-import SwiftyTimer
 
 
 /**
@@ -168,7 +167,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc open var cleanSession = true
     @objc open var willMessage: CocoaMQTTWill?
     @objc open weak var delegate: CocoaMQTTDelegate?
-    open var backgroundOnSocket = false
+    @objc open var backgroundOnSocket = true
     open var dispatchQueue = DispatchQueue.main
     
     @objc open var connState = CocoaMQTTConnState.initial {
@@ -195,7 +194,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     fileprivate var aliveTimer: Timer?
     
     // auto reconnect
-    open var autoReconnect = false
+    @objc open var autoReconnect = false
     open var autoReconnectTimeInterval: UInt16 = 20
     fileprivate var autoReconnTimer: Timer?
     fileprivate var disconnectExpectedly = false
@@ -209,10 +208,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
             CocoaMQTTLogger.logger.minLevel = newValue
         }
     }
-    @objc open func startDebugLog() {
-        logLevel = .debug
-        NSLog("Starting CocoaMQTTLoglevel = \(self.logLevel)")
-    }
+    
     // ssl
     @objc open var enableSSL = false
     @objc open var sslSettings: [String: NSObject]?
@@ -253,7 +249,6 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
         self.port = port
         super.init()
         buffer.delegate = self
-        NSLog("CocoaMQTTLoglevel = \(self.logLevel)")
     }
     
     deinit {
@@ -271,7 +266,10 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 
     fileprivate func send(_ frame: CocoaMQTTFrame, tag: Int = 0) {
         let data = frame.data()
-        socket.write(Data(bytes: data, count: data.count), withTimeout: -1, tag: tag)
+        if socket.isConnected {
+            printDebug("Sent: \(data)")
+            socket.write(Data(bytes: data, count: data.count), withTimeout: 1000, tag: tag)
+        }
     }
 
     fileprivate func sendConnectFrame() {
@@ -304,8 +302,6 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 
         if descr != nil {
             printDebug("Send \(descr!), msgid: \(msgid)")
-        } else {
-            printDebug("Send puback, msgid: \(msgid)")
         }
 
         send(CocoaMQTTFramePubAck(type: type, msgid: msgid))
@@ -366,13 +362,6 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
 //        send(frame, tag: Int(msgid))
         _ = buffer.add(frame)
         
-        
-
-        if message.qos != CocoaMQTTQOS.qos0 {
-            
-        }
-        
-
         delegate?.mqtt(self, didPublishMessage: message, id: msgid)
         didPublishMessage(self, message, msgid)
         return msgid
@@ -422,7 +411,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
         
         #if TARGET_OS_IPHONE
             if backgroundOnSocket {
-                sock.performBlock { sock.enableBackgroundingOnSocket() }
+                sock.perform { sock.enableBackgroundingOnSocket() }
             }
         #endif
         
@@ -445,7 +434,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
     public func socket(_ sock: GCDAsyncSocket, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Swift.Void) {
         printDebug("didReceiveTrust")
         
-        delegate?.mqtt!(self, didReceive: trust, completionHandler: completionHandler)
+        delegate?.mqtt?(self, didReceive: trust, completionHandler: completionHandler)
         didReceiveTrust(self, trust)
     }
 
@@ -476,15 +465,13 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
     public func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
         socket.delegate = nil
         connState = .disconnected
-        printDebug("error conecting to \(host)")
-        printDebug(err.debugDescription)
         delegate?.mqttDidDisconnect(self, withError: err)
         didDisconnect(self, err)
 
-        DispatchQueue.main.async {
+        dispatchQueue.async {
             self.autoReconnTimer?.invalidate()
             if !self.disconnectExpectedly && self.autoReconnect && self.autoReconnectTimeInterval > 0 {
-                self.autoReconnTimer = Timer.every(Double(self.autoReconnectTimeInterval).seconds, { [weak self] (timer: Timer) in
+                self.autoReconnTimer = Timer.every(Double(self.autoReconnectTimeInterval), { [weak self] (timer: Timer) in
                     printDebug("try reconnect")
                     self?.connect()
                 })
@@ -496,7 +483,7 @@ extension CocoaMQTT: GCDAsyncSocketDelegate {
 // MARK: - CocoaMQTTReaderDelegate
 extension CocoaMQTT: CocoaMQTTReaderDelegate {
     func didReceiveConnAck(_ reader: CocoaMQTTReader, connack: UInt8) {
-        printDebug("CONNACK Received: \(connack)")
+        printDebug("CONNACK Received2: \(connack)")
 
         let ack: CocoaMQTTConnAck
         switch connack {
@@ -514,6 +501,10 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
             return
         }
 
+        // XXX: may casue message not acked miss
+        // clean silos (reset flow controll)
+        buffer.cleanSilos()
+
         delegate?.mqtt(self, didConnectAck: ack)
         didConnectAck(self, ack)
         
@@ -522,12 +513,13 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
             autoReconnTimer?.invalidate()
             disconnectExpectedly = false
         }
-
+        
         // keep alive
+        // FIXME: if keepalive == 0 --> not set keekalive timer???
         if ack == CocoaMQTTConnAck.accept && keepAlive > 0 {
-            DispatchQueue.main.async {
+            dispatchQueue.async{
                 self.aliveTimer?.invalidate()
-                self.aliveTimer = Timer.every(Double(self.keepAlive / 2 + 1).seconds) { [weak self] (timer: Timer) in
+                self.aliveTimer = Timer.every(Double(self.keepAlive / 2 + 1)) { [weak self] (timer: Timer) in
                     if self?.connState == .connected {
                         self?.ping()
                     } else {
@@ -584,7 +576,7 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
 
     func didReceivePubComp(_ reader: CocoaMQTTReader, msgid: UInt16) {
         printDebug("PUBCOMP Received: \(msgid)")
-// if acting as a gateway, forward PUBCOMP to client
+
         buffer.sendSuccess(withMsgid: msgid)
         delegate?.mqtt?(self, didPublishComplete: msgid)
         didCompletePublish(self, msgid)
@@ -763,8 +755,8 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
 
 /// MARK - Logger
 
-public enum CocoaMQTTLoggerLevel {
-    case debug, warning, error, off
+public enum CocoaMQTTLoggerLevel: Int {
+    case debug = 0, warning, error, off
 }
 
 public class CocoaMQTTLogger: NSObject {
@@ -778,7 +770,7 @@ public class CocoaMQTTLogger: NSObject {
     
     // logs
     func log(level: CocoaMQTTLoggerLevel, message: String) {
-        guard level.hashValue >= minLevel.hashValue else { return }
+        guard level.rawValue >= minLevel.rawValue else { return }
         print("CocoaMQTT(\(level)): \(message)")
     }
     
@@ -807,4 +799,55 @@ public func printWarning(_ message: String) {
 
 public func printError(_ message: String) {
     CocoaMQTTLogger.logger.error(message)
+}
+
+
+/// MARK - Timer
+/// From https://github.com/radex/SwiftyTimer
+extension Timer {
+    
+    /// Create and schedule a timer that will call `block` repeatedly in specified time intervals.
+    
+    @discardableResult
+    public class func every(_ interval: TimeInterval, _ block: @escaping (Timer) -> Void) -> Timer {
+        let timer = Timer.new(every: interval, block)
+        CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, .commonModes)
+        return timer
+    }
+    
+    /// Create and schedule a timer that will call `block` once after the specified time.
+    
+    @discardableResult
+    public class func after(_ interval: TimeInterval, _ block: @escaping () -> Void) -> Timer {
+        let timer = Timer.new(after: interval, block)
+        CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, .commonModes)
+        return timer
+    }
+    
+    /// Create a timer that will call `block` repeatedly in specified time intervals.
+    /// (This variant also passes the timer instance to the block)
+    ///
+    /// - Note: The timer won't fire until it's scheduled on the run loop.
+    ///         Use `NSTimer.every` to create and schedule a timer in one step.
+    /// - Note: The `new` class function is a workaround for a crashing bug when using convenience initializers (rdar://18720947)
+    
+    @nonobjc public class func new(every interval: TimeInterval, _ block: @escaping (Timer) -> Void) -> Timer {
+        var timer: Timer!
+        timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, interval, 0, 0) { _ in
+            block(timer)
+        }
+        return timer
+    }
+    
+    /// Create a timer that will call `block` once after the specified time.
+    ///
+    /// - Note: The timer won't fire until it's scheduled on the run loop.
+    ///         Use `NSTimer.after` to create and schedule a timer in one step.
+    /// - Note: The `new` class function is a workaround for a crashing bug when using convenience initializers (rdar://18720947)
+    
+    public class func new(after interval: TimeInterval, _ block: @escaping () -> Void) -> Timer {
+        return CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0) { _ in
+            block()
+        }
+    }
 }
