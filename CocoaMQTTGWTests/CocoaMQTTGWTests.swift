@@ -1,6 +1,6 @@
 //
-//  CocoaMQTTTests.swift
-//  CocoaMQTTTests
+//  CocoaMQTTGWTests.swift
+//  CocoaMQTTGWTests
 //
 //  Created by CrazyWisdom on 15/12/11.
 //  Copyright © 2015年 emqtt.io. All rights reserved.
@@ -21,7 +21,7 @@ let autoReconn: UInt16 = 5
 let topicToSub = "animals"
 let longString = longStringGen()
 
-class CocoaMQTTTests: XCTestCase, CocoaMQTTDelegate {
+class CocoaMQTTGWTests: XCTestCase, CocoaMQTTDelegate {
     
     var mqtt: CocoaMQTT = CocoaMQTT(clientID: clientID, host: host, port: port)
     

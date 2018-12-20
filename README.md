@@ -1,11 +1,12 @@
-CocoaMQTT
-=========
+CocoaMQTTGW
+=============
 ![PodVersion](https://img.shields.io/cocoapods/v/CocoaMQTT.svg)
 ![Platforms](https://img.shields.io/cocoapods/p/CocoaMQTT.svg)
 ![License](https://img.shields.io/cocoapods/l/BadgeSwift.svg?style=flat)
 ![Swift version](https://img.shields.io/badge/swift-4.2-orange.svg)
 
-MQTT v3.1.1 client library for iOS/macOS/tvOS  written with Swift 4
+MQTT v3.1.1 client library for iOS/macOS/tvOS  written with Swift 4with modifications to work 
+with Objective C and to work as a MQTT gateway
 
 
 Build
@@ -21,42 +22,13 @@ Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podf
 
 ````ruby
 use_frameworks! # Add this if you are targeting iOS 8+ or using Swift
-pod 'CocoaMQTT'  
+pod 'CocoaMQTTGW'  
 ````
 Then, run the following command:
 
 ```bash
 $ pod install
 ```
-
-### Carthage
-Install using [Carthage](https://github.com/Carthage/Carthage) by adding the following lines to your Cartfile:
-
-````
-github "robbiehanson/CocoaAsyncSocket" "master"
-github "emqtt/CocoaMQTT" "master"
-````
-Then, run the following command:
-
-```bash
-$ carthage update --platform iOS
-```
-Last if you're building for OS X:
-
-- On your application targets “General” settings tab, in the “Embedded Binaries” section, drag and drop CocoaMQTT.framework from the Carthage/Build/Mac folder on disk.
-
-If you're building for iOS, tvOS:
-
-- On your application targets “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the Carthage/Build folder on disk.
-
-- On your application targets “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script with the following contents: 
-`/usr/local/bin/carthage copy-frameworks`
-
-- and add the paths to the frameworks you want to use under “Input Files”, e.g.:
-```
-$(SRCROOT)/Carthage/Build/iOS/CocoaMQTT.framework
-```
-
 
 Usage
 =====
@@ -122,12 +94,17 @@ protocol CocoaMQTTClient {
     var willMessage: CocoaMQTTWill? {get set}
 
     func connect() -> Bool
-    func publish(_ topic: String, withString string: String, qos: CocoaMQTTQOS, retained: Bool, dup: Bool) -> UInt16
-    func publish(_ message: CocoaMQTTMessage) -> UInt16
+    func disconnect()
+    func ping()
+    
     func subscribe(_ topic: String, qos: CocoaMQTTQOS) -> UInt16
     func unsubscribe(_ topic: String) -> UInt16
-    func ping()
-    func disconnect()
+    func publish(_ topic: String, withString string: String, qos: CocoaMQTTQOS, retained: Bool, dup: Bool) -> UInt16
+    func publish(_ message: CocoaMQTTMessage) -> UInt16
+    func completePublish(_ msgid: UInt16)
+    func sendPubRec(_ msgid: UInt16)
+    func sendPubRel(_ msgid: UInt16)
+    
 }
 ```
 
@@ -143,15 +120,17 @@ CocoaMQTTDelegate
     /// MQTT connected with server
     // deprecated: use mqtt(_ mqtt: CocoaMQTT, didConnectAck ack: CocoaMQTTConnAck) to tell if connect to the server successfully
     // func mqtt(_ mqtt: CocoaMQTT, didConnect host: String, port: Int)
-    func mqtt(_ mqtt: CocoaMQTT, didConnectAck ack: CocoaMQTTConnAck)
-    func mqtt(_ mqtt: CocoaMQTT, didPublishMessage message: CocoaMQTTMessage, id: UInt16)
-    func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16)
-    func mqtt(_ mqtt: CocoaMQTT, didReceiveMessage message: CocoaMQTTMessage, id: UInt16 )
-    func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopic topic: String)
-    func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopic topic: String)
-    func mqttDidPing(_ mqtt: CocoaMQTT)
-    func mqttDidReceivePong(_ mqtt: CocoaMQTT)
-    func mqttDidDisconnect(_ mqtt: CocoaMQTT, withError err: Error?)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didConnectAck ack: CocoaMQTTConnAck)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishMessage message: CocoaMQTTMessage, id: UInt16)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16)
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRec id: UInt16)
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRel id: UInt16)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didReceiveMessage message: CocoaMQTTMessage, id: UInt16 )
+    @objc func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopic topic: String)
+    @objc func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopic topic: String)
+    @objc func mqttDidPing(_ mqtt: CocoaMQTT)
+    @objc func mqttDidReceivePong(_ mqtt: CocoaMQTT)
+    @objc func mqttDidDisconnect(_ mqtt: CocoaMQTT, withError err: Error?)
     @objc optional func mqtt(_ mqtt: CocoaMQTT, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Void)
     @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishComplete id: UInt16)
     @objc optional func mqtt(_ mqtt: CocoaMQTT, didStateChangeTo state: CocoaMQTTConnState)
@@ -159,13 +138,12 @@ CocoaMQTTDelegate
 ```
 
 
-AsyncSocket and Timer
-=====================
+AsyncSocket 
+==========
 
 These third-party functions are used:
 
 * [GCDAsyncSocket](https://github.com/robbiehanson/CocoaAsyncSocket)
-* [SwiftyTimer](https://github.com/radex/SwiftyTimer)
 
 
 LICENSE
@@ -177,6 +155,8 @@ MIT License (see `LICENSE`)
 
 * [@andypiper](https://github.com/andypiper)
 * [@turtleDeng](https://github.com/turtleDeng)
+* [@trvd1707](https://github.com/trvd1707)
+
 
 
 Author
