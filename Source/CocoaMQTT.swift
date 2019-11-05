@@ -196,7 +196,7 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     
     // auto reconnect
     @objc open var autoReconnect = false
-    open var autoReconnectTimeInterval: UInt16 = 20
+    @objc open var autoReconnectTimeInterval: UInt16 = 20
     fileprivate var autoReconnTimer: Timer?
     fileprivate var disconnectExpectedly = false
     
