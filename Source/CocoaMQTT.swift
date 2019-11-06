@@ -769,7 +769,7 @@ public class CocoaMQTTLogger: NSObject {
     private override init() {}
     
     // min level
-    public var minLevel: CocoaMQTTLoggerLevel = .debug
+    public var minLevel: CocoaMQTTLoggerLevel = .error
     
     // logs
     func log(level: CocoaMQTTLoggerLevel, message: String) {
