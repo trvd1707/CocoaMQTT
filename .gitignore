@@ -29,3 +29,7 @@ DerivedData
 *.xcuserstate
 Example/Pods
 Example/Podfile.lock
+Carthage/
+Cartfile.resolved
+xcenv.sh
+*.swp
