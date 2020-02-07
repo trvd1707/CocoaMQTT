@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CocoaMQTTGW
+import CocoaMQTT
 
 
 class ChatViewController: UIViewController {

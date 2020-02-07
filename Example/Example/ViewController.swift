@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CocoaMQTTGW
+import CocoaMQTT
 
 
 class ViewController: UIViewController {
@@ -26,7 +26,7 @@ class ViewController: UIViewController {
     }
     
     @IBAction func connectToServer() {
-        mqtt!.connect()
+        _ = mqtt!.connect()
     }
     
     override func viewDidLoad() {
@@ -37,6 +37,8 @@ class ViewController: UIViewController {
         mqttSetting()
         // selfSignedSSLSetting()
         // simpleSSLSetting()
+        // mqttWebsocketsSetting()
+        // mqttWebsocketSSLSetting()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -48,7 +50,7 @@ class ViewController: UIViewController {
         mqtt = CocoaMQTT(clientID: clientID, host: defaultHost, port: 1883)
         mqtt!.username = ""
         mqtt!.password = ""
-        mqtt!.willMessage = CocoaMQTTWill(topic: "/will", message: "dieout")
+        mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
         mqtt!.keepAlive = 60
         mqtt!.delegate = self
     }
@@ -58,7 +60,7 @@ class ViewController: UIViewController {
         mqtt = CocoaMQTT(clientID: clientID, host: defaultHost, port: 8883)
         mqtt!.username = ""
         mqtt!.password = ""
-        mqtt!.willMessage = CocoaMQTTWill(topic: "/will", message: "dieout")
+        mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
         mqtt!.keepAlive = 60
         mqtt!.delegate = self
         mqtt!.enableSSL = true
@@ -69,10 +71,11 @@ class ViewController: UIViewController {
         mqtt = CocoaMQTT(clientID: clientID, host: defaultHost, port: 8883)
         mqtt!.username = ""
         mqtt!.password = ""
-        mqtt!.willMessage = CocoaMQTTWill(topic: "/will", message: "dieout")
+        mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
         mqtt!.keepAlive = 60
         mqtt!.delegate = self
         mqtt!.enableSSL = true
+        mqtt!.allowUntrustCACertificate = true
         
         let clientCertArray = getClientCertFromP12File(certName: "client-keycert", certPassword: "MySecretPassword")
         
@@ -80,6 +83,29 @@ class ViewController: UIViewController {
         sslSettings[kCFStreamSSLCertificates as String] = clientCertArray
         
         mqtt!.sslSettings = sslSettings
+    }
+    
+    func mqttWebsocketsSetting() {
+        let clientID = "CocoaMQTT-\(animal!)-" + String(ProcessInfo().processIdentifier)
+        let websocket = CocoaMQTTWebSocket(uri: "/mqtt")
+        mqtt = CocoaMQTT(clientID: clientID, host: defaultHost, port: 8083, socket: websocket)
+        mqtt!.username = ""
+        mqtt!.password = ""
+        mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
+        mqtt!.keepAlive = 60
+        mqtt!.delegate = self
+    }
+    
+    func mqttWebsocketSSLSetting() {
+        let clientID = "CocoaMQTT-\(animal!)-" + String(ProcessInfo().processIdentifier)
+        let websocket = CocoaMQTTWebSocket(uri: "/mqtt")
+        mqtt = CocoaMQTT(clientID: clientID, host: defaultHost, port: 8084, socket: websocket)
+        mqtt!.enableSSL = true
+        mqtt!.username = ""
+        mqtt!.password = ""
+        mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
+        mqtt!.keepAlive = 60
+        mqtt!.delegate = self
     }
     
     func getClientCertFromP12File(certName: String, certPassword: String) -> CFArray? {
@@ -123,6 +149,7 @@ class ViewController: UIViewController {
 }
 
 extension ViewController: CocoaMQTTDelegate {
+    
     // Optional ssl CocoaMQTTDelegate
     func mqtt(_ mqtt: CocoaMQTT, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Void) {
         TRACE("trust: \(trust)")
@@ -142,7 +169,7 @@ extension ViewController: CocoaMQTTDelegate {
         TRACE("ack: \(ack)")
 
         if ack == .accept {
-            mqtt.subscribe("chat/room/animals/client/+", qos: CocoaMQTTQOS.qos1)
+            mqtt.subscribe("chat/room/animals/client/+", qos: CocoaMQTTQoS.qos1)
             
             let chatViewController = storyboard?.instantiateViewController(withIdentifier: "ChatViewController") as? ChatViewController
             chatViewController?.mqtt = mqtt
@@ -169,12 +196,12 @@ extension ViewController: CocoaMQTTDelegate {
         NotificationCenter.default.post(name: name, object: self, userInfo: ["message": message.string!, "topic": message.topic])
     }
     
-    func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopic topic: String) {
-        TRACE("topic: \(topic)")
+    func mqtt(_ mqtt: CocoaMQTT, didSubscribeTopics success: NSDictionary, failed: [String]) {
+        TRACE("subscribed: \(success), failed: \(failed)")
     }
     
-    func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopic topic: String) {
-        TRACE("topic: \(topic)")
+    func mqtt(_ mqtt: CocoaMQTT, didUnsubscribeTopics topics: [String]) {
+        TRACE("topic: \(topics)")
     }
     
     func mqttDidPing(_ mqtt: CocoaMQTT) {
@@ -201,7 +228,7 @@ extension ViewController {
     func TRACE(_ message: String = "", fun: String = #function) {
         let names = fun.components(separatedBy: ":")
         var prettyName: String
-        if names.count == 1 {
+        if names.count == 2 {
             prettyName = names[0]
         } else {
             prettyName = names[1]
