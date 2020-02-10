@@ -33,6 +33,14 @@ import Foundation
         }
     }  
 
+    @objc public init(topic: String, string: String, qos: CocoaMQTTQoS = .qos1, retained: Bool = false, dup: Bool = false) {
+        self.topic = topic
+        self.payload = [UInt8](string.utf8)
+        self.qos = qos
+        self.retained = retained
+        self.duplicated = dup
+    }
+    
     @objc public init(topic: String, string: String, qos: CocoaMQTTQoS = .qos1, retained: Bool = false) {
         self.topic = topic
         self.payload = [UInt8](string.utf8)
@@ -45,6 +53,14 @@ import Foundation
         self.payload = payload
         self.qos = qos
         self.retained = retained
+    }
+    
+    @ objc public init(topic: String, payload: [UInt8], qos: CocoaMQTTQoS = .qos1, retained: Bool = false, dup: Bool = false) {
+        self.topic = topic
+        self.payload = payload
+        self.qos = qos
+        self.retained = retained
+        self.duplicated = dup
     }
 }
 

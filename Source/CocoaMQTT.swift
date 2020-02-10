@@ -127,8 +127,8 @@ protocol CocoaMQTTClient {
 
     /* PUBLISH/SUBSCRIBE */
     
-    func subscribe(_ topic: String, qos: CocoaMQTTQoS)
-    func subscribe(_ topics: [(String, CocoaMQTTQoS)])
+    func subscribe(_ topic: String, qos: CocoaMQTTQoS) -> UInt16
+    func subscribe(_ topics: [(String, CocoaMQTTQoS)]) -> UInt16
     
     func unsubscribe(_ topic: String)
     func unsubscribe(_ topics: [String])
@@ -142,7 +142,7 @@ protocol CocoaMQTTClient {
 ///
 /// - Note: GCDAsyncSocket need delegate to extend NSObject
 public class CocoaMQTT: NSObject, CocoaMQTTClient {
-    
+
     /// @objc open var secureMQTT = false   // not sure if it is still necessary
     
     @objc public weak var delegate: CocoaMQTTDelegate?
@@ -164,7 +164,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     public var cleanSession = true
     
     /// Setup a **Last Will Message** to client before connecting to borker
-    public var willMessage: CocoaMQTTMessage?
+    @objc public var willMessage: CocoaMQTTMessage?
     
     /// Enable backgounding socket if running on iOS platform. Default is true
     ///
@@ -179,7 +179,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     /// The delegate/closure callback function will be commited asynchronously to it
     public var delegateQueue = DispatchQueue.main
     
-    public var connState = CocoaMQTTConnState.disconnected {
+    @objc public var connState = CocoaMQTTConnState.disconnected {
         didSet {
             __delegate_queue {
                 self.delegate?.mqtt?(self, didStateChangeTo: self.connState)
@@ -212,17 +212,17 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     }
     
     /// Keep alive time inerval
-    public var keepAlive: UInt16 = 60
+    @objc public var keepAlive: UInt16 = 60
     private var aliveTimer: CocoaMQTTTimer?
     
     /// Enable auto-reconnect mechanism
-    public var autoReconnect = false
+    @objc public var autoReconnect = false
     
     /// Reconnect time interval
     ///
     /// - note: This value will be increased with `autoReconnectTimeInterval *= 2`
     ///         if reconnect failed
-    public var autoReconnectTimeInterval: UInt16 = 1 // starts from 1 second
+    @objc public var autoReconnectTimeInterval: UInt16 = 1 // starts from 1 second
     
     /// Maximum auto reconnect time interval
     ///
@@ -299,7 +299,16 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     ///   - clientID: Client Identifier
     ///   - host: The MQTT broker host domain or IP address. Default is "localhost"
     ///   - port: The MQTT service port of host. Default is 1883
-    public init(clientID: String, host: String = "localhost", port: UInt16 = 1883, socket: CocoaMQTTSocketProtocol = CocoaMQTTSocket()) {
+    
+    @objc public init(clientID: String, host: String = "localhost", port: UInt16 = 1883) {
+        self.clientID = clientID
+        self.host = host
+        self.port = port
+        self.socket = CocoaMQTTSocket()
+        super.init()
+        deliver.delegate = self
+    }
+   public init(clientID: String, host: String = "localhost", port: UInt16 = 1883, socket: CocoaMQTTSocketProtocol = CocoaMQTTSocket()) {
         self.clientID = clientID
         self.host = host
         self.port = port
@@ -360,7 +369,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     /// - Returns:
     ///   - Bool: It indicates whether successfully calling socket connect function.
     ///           Not yet established correct MQTT session
-    public func connect() -> Bool {
+    @objc public func connect() -> Bool {
         return connect(timeout: -1)
     }
     
@@ -483,7 +492,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     ///   - topic: Topic Name or Topic Filter
     ///   - qos: Qos. Default is qos1
     @objc
-    public func subscribe(_ topic: String, qos: CocoaMQTTQoS = .qos1) {
+    public func subscribe(_ topic: String, qos: CocoaMQTTQoS = .qos1) -> UInt16 {
         return subscribe([(topic, qos)])
     }
     
@@ -491,11 +500,12 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     ///
     /// - Parameters:
     ///   - topics: A list of tuples presented by `(<Topic Names>/<Topic Filters>, Qos)`
-    public func subscribe(_ topics: [(String, CocoaMQTTQoS)]) {
+    public func subscribe(_ topics: [(String, CocoaMQTTQoS)]) -> UInt16 {
         let msgid = nextMessageID()
         let frame = FrameSubscribe(msgid: msgid, topics: topics)
         send(frame, tag: Int(msgid))
         subscriptionsWaitingAck[msgid] = topics
+        return msgid
     }
 
     /// Unsubscribe a Topic
@@ -520,13 +530,19 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     
     /// Added for support to transparent gateway finctionality
     @objc
-    func sendPubRec(_ msgid: UInt16) {
+    public func sendPubRec(_ msgid: UInt16) {
          puback(FrameType.pubrec, msgid: msgid)
     }
     @objc
-    func sendPubRel(_ msgid: UInt16) {
+    public func sendPubRel(_ msgid: UInt16) {
          puback(FrameType.pubrel, msgid: msgid)
     }
+    
+    @objc
+    open func completePublish(_ msgid: UInt16) {
+        puback(FrameType.pubcomp, msgid: msgid)
+    }
+    
 }
 
 // MARK: CocoaMQTTDeliverProtocol
