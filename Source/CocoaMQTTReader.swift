@@ -18,17 +18,17 @@ enum CocoaMQTTReadTag: Int {
 ///
 protocol CocoaMQTTReaderDelegate: class {
    
-    func didRecevied(_ reader: CocoaMQTTReader, connack: FrameConnAck)
+    func didReceived(_ reader: CocoaMQTTReader, connack: FrameConnAck)
     
-    func didRecevied(_ reader: CocoaMQTTReader, publish: FramePublish)
+    func didReceived(_ reader: CocoaMQTTReader, publish: FramePublish)
     
     func didReceived(_ reader: CocoaMQTTReader, puback: FramePubAck)
     
-    func didRecevied(_ reader: CocoaMQTTReader, pubrec: FramePubRec)
+    func didReceived(_ reader: CocoaMQTTReader, pubrec: FramePubRec)
     
     func didReceived(_ reader: CocoaMQTTReader, pubrel: FramePubRel)
     
-    func didRecevied(_ reader: CocoaMQTTReader, pubcomp: FramePubComp)
+    func didReceived(_ reader: CocoaMQTTReader, pubcomp: FramePubComp)
     
     func didReceived(_ reader: CocoaMQTTReader, suback: FrameSubAck)
     
@@ -117,13 +117,13 @@ class CocoaMQTTReader {
                 printError("Reader parse \(frameType) failed, data: \(data)")
                 break
             }
-            delegate?.didRecevied(self, connack: connack)
+            delegate?.didReceived(self, connack: connack)
         case .publish:
             guard let publish = FramePublish(fixedHeader: header, bytes: data) else {
                 printError("Reader parse \(frameType) failed, data: \(data)")
                 break
             }
-            delegate?.didRecevied(self, publish: publish)
+            delegate?.didReceived(self, publish: publish)
         case .puback:
             guard let puback = FramePubAck(fixedHeader: header, bytes: data) else {
                 printError("Reader parse \(frameType) failed, data: \(data)")
@@ -135,7 +135,7 @@ class CocoaMQTTReader {
                 printError("Reader parse \(frameType) failed, data: \(data)")
                 break
             }
-            delegate?.didRecevied(self, pubrec: pubrec)
+            delegate?.didReceived(self, pubrec: pubrec)
         case .pubrel:
             guard let pubrel = FramePubRel(fixedHeader: header, bytes: data) else {
                 printError("Reader parse \(frameType) failed, data: \(data)")
@@ -147,7 +147,7 @@ class CocoaMQTTReader {
                 printError("Reader parse \(frameType) failed, data: \(data)")
                 break
             }
-            delegate?.didRecevied(self, pubcomp: pubcomp)
+            delegate?.didReceived(self, pubcomp: pubcomp)
         case .suback:
             guard let frame = FrameSubAck(fixedHeader: header, bytes: data) else {
                 printError("Reader parse \(frameType) failed, data: \(data)")

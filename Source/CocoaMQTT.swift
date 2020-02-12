@@ -64,6 +64,13 @@ import CocoaAsyncSocket
     ///
     @objc func mqtt(_ mqtt: CocoaMQTT, didPublishAck id: UInt16)
     
+    /// zoptional delegates for transparent gateway usage
+    ///
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRec id: UInt16)
+    
+    ///
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishRel id: UInt16)
+    
     ///
     @objc func mqtt(_ mqtt: CocoaMQTT, didReceiveMessage message: CocoaMQTTMessage, id: UInt16 )
     
@@ -119,10 +126,6 @@ protocol CocoaMQTTClient {
     func connect(timeout:TimeInterval) -> Bool
     func disconnect()
     func ping()
-    
-    func sendPubRec(_ msgid: UInt16)
-    func sendPubRel(_ msgid: UInt16)
-
     /* CONNNEC/DISCONNECT */
 
     /* PUBLISH/SUBSCRIBE */
@@ -135,6 +138,10 @@ protocol CocoaMQTTClient {
     
     func publish(_ topic: String, withString string: String, qos: CocoaMQTTQoS, retained: Bool) -> Int
     func publish(_ message: CocoaMQTTMessage) -> Int
+    // added for transparent gateway functionality
+    func completePublish(_ msgid: UInt16)
+    func sendPubRec(_ msgid: UInt16)
+    func sendPubRel(_ msgid: UInt16)
     /* PUBLISH/SUBSCRIBE */
 }
 
@@ -283,6 +290,10 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     public var didConnectAck: (CocoaMQTT, CocoaMQTTConnAck) -> Void = { _, _ in }
     public var didPublishMessage: (CocoaMQTT, CocoaMQTTMessage, UInt16) -> Void = { _, _, _ in }
     public var didPublishAck: (CocoaMQTT, UInt16) -> Void = { _, _ in }
+    // added for transparent gateway functionality
+    public var didPublishRel: (CocoaMQTT, UInt16) -> Void = { _, _ in }
+    public var didPublishRec: (CocoaMQTT, UInt16) -> Void = { _, _ in }
+    //
     public var didReceiveMessage: (CocoaMQTT, CocoaMQTTMessage, UInt16) -> Void = { _, _, _ in }
     public var didSubscribeTopics: (CocoaMQTT, NSDictionary, [String]) -> Void = { _, _, _  in }
     public var didUnsubscribeTopics: (CocoaMQTT, [String]) -> Void = { _, _ in }
@@ -529,6 +540,12 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     }
     
     /// Added for support to transparent gateway finctionality
+    
+    @objc
+    open func completePublish(_ msgid: UInt16) {
+        puback(FrameType.pubcomp, msgid: msgid)
+    }
+    
     @objc
     public func sendPubRec(_ msgid: UInt16) {
          puback(FrameType.pubrec, msgid: msgid)
@@ -536,11 +553,6 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     @objc
     public func sendPubRel(_ msgid: UInt16) {
          puback(FrameType.pubrel, msgid: msgid)
-    }
-    
-    @objc
-    open func completePublish(_ msgid: UInt16) {
-        puback(FrameType.pubcomp, msgid: msgid)
     }
     
 }
@@ -627,26 +639,6 @@ extension CocoaMQTT: CocoaMQTTSocketDelegate {
         connState = .disconnected
         delegate?.mqttDidDisconnect(self, withError: err)
         didDisconnect(self, err)
-
-// MARK: - CocoaMQTTReaderDelegate
-//extension CocoaMQTT: CocoaMQTTReaderDelegate {
-//    func didReceiveConnAck(_ reader: CocoaMQTTReader, connack: UInt8) {
-//        printDebug("CONNACK Received2: \(connack)")
-//
-//        let ack: CocoaMQTTConnAck
-//        switch connack {
-//        case 0:
-//            ack = .accept
-//            connState = .connected
-//        case 1...5:
-//            ack = CocoaMQTTConnAck(rawValue: connack)!
-//            internal_disconnect()
-//        case _ where connack > 5:
-//            ack = .reserved
-//            internal_disconnect()
-//        default:
-//            internal_disconnect()
-//=======
         
         guard is_internal_disconnected else {
 
@@ -678,7 +670,7 @@ extension CocoaMQTT: CocoaMQTTSocketDelegate {
 // MARK: - CocoaMQTTReaderDelegate
 extension CocoaMQTT: CocoaMQTTReaderDelegate {
     
-    func didRecevied(_ reader: CocoaMQTTReader, connack: FrameConnAck) {
+    func didReceived(_ reader: CocoaMQTTReader, connack: FrameConnAck) {
         printDebug("RECV: \(connack)")
 
         if connack.returnCode == .accept {
@@ -727,26 +719,27 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         didConnectAck(self, connack.returnCode)
     }
 
-    func didRecevied(_ reader: CocoaMQTTReader, publish: FramePublish) {
-        printDebug("RECV: \(publish)")
+    func didReceived(_ reader: CocoaMQTTReader, publish: FramePublish) {
+        
+        printDebug("\(clientID) ->RECV: \(publish)")
         
         let message = CocoaMQTTMessage(topic: publish.topic, payload: publish.payload(), qos: publish.qos, retained: publish.retained)
-        
         message.duplicated = publish.dup
         
-        printInfo("Recevied message: \(message)")
+        printInfo("Received message: \(message)")
         delegate?.mqtt(self, didReceiveMessage: message, id: publish.msgid)
         didReceiveMessage(self, message, publish.msgid)
-        
-        if message.qos == .qos1 {
-            puback(FrameType.puback, msgid: publish.msgid)
-        } else if message.qos == .qos2 {
-            puback(FrameType.pubrec, msgid: publish.msgid)
+        if !isGateway {
+            if message.qos == .qos1 {
+                puback(FrameType.puback, msgid: publish.msgid)
+            } else if message.qos == .qos2 {
+                puback(FrameType.pubrec, msgid: publish.msgid)
+            }
         }
     }
 
     func didReceived(_ reader: CocoaMQTTReader, puback: FramePubAck) {
-        printDebug("RECV: \(puback)")
+        printDebug("\(clientID) ->RECV: \(puback)")
         
         deliver.ack(by: puback)
         
@@ -754,20 +747,28 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         didPublishAck(self, puback.msgid)
     }
     
-    func didRecevied(_ reader: CocoaMQTTReader, pubrec: FramePubRec) {
-        printDebug("RECV: \(pubrec)")
-        
-        deliver.ack(by: pubrec)
+    func didReceived(_ reader: CocoaMQTTReader, pubrec: FramePubRec) {
+        printDebug("\(clientID) ->RECV: \(pubrec)")
+        if(isGateway){
+            delegate?.mqtt!(self, didPublishRec: pubrec.msgid)
+            didPublishRec(self,pubrec.msgid)
+        } else {
+            deliver.ack(by: pubrec)
+        }
     }
 
     func didReceived(_ reader: CocoaMQTTReader, pubrel: FramePubRel) {
-        printDebug("RECV: \(pubrel)")
-
-        puback(FrameType.pubcomp, msgid: pubrel.msgid)
+        printDebug("\(clientID) ->RECV: \(pubrel)")
+        if isGateway {
+            delegate?.mqtt!(self, didPublishRel: pubrel.msgid)
+            didPublishRel(self, pubrel.msgid)
+        } else {
+            puback(FrameType.pubcomp, msgid: pubrel.msgid)
+        }
     }
 
-    func didRecevied(_ reader: CocoaMQTTReader, pubcomp: FramePubComp) {
-        printDebug("RECV: \(pubcomp)")
+    func didReceived(_ reader: CocoaMQTTReader, pubcomp: FramePubComp) {
+        printDebug("\(clientID) ->RECV: \(pubcomp)")
 
         deliver.ack(by: pubcomp)
         
@@ -784,7 +785,7 @@ extension CocoaMQTT: CocoaMQTTReaderDelegate {
         }
         
         guard topicsAndQos.count == suback.grantedQos.count else {
-            printWarning("UNEXPECT SUBACK Recivied: \(suback)")
+            printWarning("UNEXPECT SUBACK Received: \(suback)")
             return
         }
         
