@@ -17,13 +17,15 @@ Pod::Spec.new do |s|
   
   s.subspec 'Core' do |ss|
     ss.dependency "CocoaAsyncSocket", "~> 7.6.3"
+    ss.dependency "CocoaLumberjack", "~>3.6.0"
     ss.source_files = "Source/*.swift"
     ss.exclude_files = "Source/CocoaMQTTWebSocket.swift"
   end
   
   s.subspec 'WebSockets' do |ss|
-    ss.dependency "CocoaMQTT/Core"
+    ss.dependency "CocoaMQTTGW/Core"
     ss.dependency "Starscream", "~> 3.0.2"
     ss.source_files = "Source/CocoaMQTTWebSocket.swift"
   end
+  
 end

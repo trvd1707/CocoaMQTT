@@ -7,8 +7,17 @@
 //
 
 import UIKit
-import CocoaMQTT
+import CocoaMQTTGW
+import CocoaLumberjack
 
+
+func getDocumentsDirectory() -> URL {
+    // find all possible documents directories for this user
+    let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+
+    // just send back the first one, which ought to be the only one
+    return paths[0]
+}
 
 class ViewController: UIViewController {
     let defaultHost = "127.0.0.1"
@@ -34,6 +43,17 @@ class ViewController: UIViewController {
         navigationController?.interactivePopGestureRecognizer?.isEnabled = false
         tabBarController?.delegate = self
         animal = tabBarController?.selectedViewController?.tabBarItem.title
+        
+        DDLog.add(DDOSLogger.sharedInstance) // Uses os_log
+         let url = getDocumentsDirectory().appendingPathComponent("Logs")
+         let logFM = DDLogFileManagerDefault(logsDirectory: url.path)
+
+         let fileLogger: DDFileLogger = DDFileLogger(logFileManager: logFM) // File Logger
+         fileLogger.rollingFrequency = 60 * 60 * 24 // 24 hours
+         fileLogger.logFileManager.maximumNumberOfLogFiles = 7
+         DDLog.add(fileLogger)
+         print("File Logger \(fileLogger.logFileManager.sortedLogFileNames.description)")
+        
         mqttSetting()
         // selfSignedSSLSetting()
         // simpleSSLSetting()
@@ -53,6 +73,7 @@ class ViewController: UIViewController {
         mqtt!.willMessage = CocoaMQTTMessage(topic: "/will", string: "dieout")
         mqtt!.keepAlive = 60
         mqtt!.delegate = self
+        mqtt!.logLevel = .debug
     }
     
     func simpleSSLSetting() {
