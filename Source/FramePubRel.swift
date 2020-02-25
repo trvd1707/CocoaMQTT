@@ -53,3 +53,11 @@ extension FramePubRel: CustomStringConvertible {
         return "PUBREL(id: \(msgid))"
     }
 }
+@objc public class FramePubRelClass: NSObject {
+    init(frame:FramePubRel) {
+        self.frame=frame
+    }
+    var frame: FramePubRel
+    func getMsgID() -> UInt16 { return frame.msgid }
+    func setMsgID( msgIDParm: UInt16) { frame.msgid = msgIDParm }
+}

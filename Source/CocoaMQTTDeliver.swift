@@ -88,7 +88,7 @@ class CocoaMQTTDeliver: NSObject {
                 mqueue.append(f)
             }
             self.storage = storage
-            printInfo("Deliver recvoer \(frames.count) msgs")
+            printInfo("Deliver recover \(frames.count) msgs")
             printDebug("Recover message \(frames)")
         }
         

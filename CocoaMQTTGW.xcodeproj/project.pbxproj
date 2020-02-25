@@ -369,11 +369,6 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-<<<<<<< HEAD:CocoaMQTTGW.xcodeproj/project.pbxproj
-				"${SRCROOT}/Pods/Target Support Files/Pods-CocoaMQTT iOSTests/Pods-CocoaMQTT iOSTests-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/CocoaAsyncSocket-iOS/CocoaAsyncSocket.framework",
-=======
->>>>>>> cb06580778234ef11492b937788d8e02f00401ef:CocoaMQTT.xcodeproj/project.pbxproj
 			);
 			outputFileListPaths = (
 			);

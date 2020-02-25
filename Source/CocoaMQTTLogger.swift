@@ -8,7 +8,7 @@
 
 import Foundation
 import CocoaLumberjack
-  
+
 // Software License Agreement (BSD License)
 //
 // Copyright (c) 2010-2020, Deusty, LLC
@@ -28,7 +28,7 @@ import CocoaLumberjack
 import CocoaLumberjackSwiftSupport
 #endif
 
-public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.all
+public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.debug
 
 extension DDLogFlag {
     public static func from(_ logLevel: DDLogLevel) -> DDLogFlag {
@@ -62,13 +62,13 @@ extension DDLogFlag {
 }
 
 /// The log level that can dynamically limit log messages (vs. the static DDDefaultLogLevel). This log level will only be checked, if the message passes the `DDDefaultLogLevel`.
-public var dynamicLogLevel = DDLogLevel.all
+public var dynamicLogLevel = DDLogLevel.debug
 
 /// Resets the `dynamicLogLevel` to `.all`.
 /// - SeeAlso: `dynamicLogLevel`
 @inlinable
 public func resetDynamicLogLevel() {
-    dynamicLogLevel = .all
+    dynamicLogLevel = .debug
 }
 
 @available(*, deprecated, message: "Please use dynamicLogLevel", renamed: "dynamicLogLevel")
@@ -242,29 +242,29 @@ open class CocoaMQTTLogger: NSObject {
     var minLevel: CocoaMQTTLoggerLevel = .debug
     
     // logs
-    open func log(level: CocoaMQTTLoggerLevel, message: String) {
-        guard level.rawValue >= minLevel.rawValue else { return }
-        print("CocoaMQTT(\(level)): \(message)")
+    open func log(level: CocoaMQTTLoggerLevel, message: String) -> String {
+        guard level.rawValue >= minLevel.rawValue else { return("Error")}
+        return("CocoaMQTT(\(level)): \(message)")
     }
     
     func debug(_ message: String) {
-        log(level: .debug, message: message)
-        DDLogDebug(message)
+        let logMessage = log(level: .debug, message: message)
+        DDLogDebug(logMessage)
     }
     
     func info(_ message: String) {
-        log(level: .info, message: message)
-        DDLogInfo(message)
+        let logMessage = log(level: .info, message: message)
+        DDLogInfo(logMessage)
     }
     
     func warning(_ message: String) {
-        log(level: .warning, message: message)
-        DDLogWarn(message)
+        let logMessage = log(level: .warning, message: message)
+        DDLogWarn(logMessage)
     }
     
     func error(_ message: String) {
-        log(level: .error, message: message)
-        DDLogError(message)
+        let logMessage = log(level: .error, message: message)
+        DDLogError(logMessage)
     }
     
 }

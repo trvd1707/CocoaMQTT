@@ -552,7 +552,8 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     }
     @objc
     public func sendPubRel(_ msgid: UInt16) {
-         puback(FrameType.pubrel, msgid: msgid)
+        let pubrec = FramePubRec(msgid: msgid)
+        deliver.ack(by: pubrec)
     }
     
 }
