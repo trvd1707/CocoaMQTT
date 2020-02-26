@@ -458,23 +458,27 @@ open class CocoaMQTTFrameBuffer: NSObject {
 
         // take out the earliest frame
         if buffer.isEmpty { return }
-        let frame = buffer.remove(at: 0)
-        
-        send(frame)
+        do {
+             let frame = try buffer.remove(at: 0)
+             send(frame)
 
-        if frame.qos != 0 {
-            silos.append(frame)
-            // XXX: When timeout arrived should resend it, not drop!
-            Timer.after(timeout) { [weak self, weak frame] in
-                guard let msgid = frame?.msgid else {return}
-                if self?.removeFrameFromSilos(withMsgid: msgid) == true {
-                    printDebug("timeout of frame:\(msgid)")
+            if frame.qos != 0 {
+                silos.append(frame)
+                // XXX: When timeout arrived should resend it, not drop!
+                Timer.after(timeout) { [weak self, weak frame] in
+                    guard let msgid = frame?.msgid else {return}
+                    if self?.removeFrameFromSilos(withMsgid: msgid) == true {
+                        printDebug("timeout of frame:\(msgid)")
+                    }
                 }
             }
+            // keep trying after a transport
+            self.tryTransport()
+        } catch  {
+            printDebug ("Couldn't remove frame from buffer")
+            return
         }
-
-        // keep trying after a transport
-        self.tryTransport()
+        
     }
     
     func send(_ frame: CocoaMQTTFramePublish) {

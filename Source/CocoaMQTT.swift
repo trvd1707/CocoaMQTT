@@ -328,7 +328,9 @@ open class CocoaMQTT: NSObject, CocoaMQTTClient, CocoaMQTTFrameBufferProtocol {
     @objc
     open func disconnect() {
         disconnectExpectedly = true
-        internal_disconnect()
+        if (connState != CocoaMQTTConnState.disconnected) {
+            internal_disconnect()
+        }
     }
     
     /// disconnect unexpectedly
