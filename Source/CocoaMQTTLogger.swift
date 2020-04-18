@@ -28,7 +28,7 @@ import CocoaLumberjack
 import CocoaLumberjackSwiftSupport
 #endif
 
-public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.info
+public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.verbose
 
 extension DDLogFlag {
     public static func from(_ logLevel: DDLogLevel) -> DDLogFlag {
@@ -62,7 +62,7 @@ extension DDLogFlag {
 }
 
 /// The log level that can dynamically limit log messages (vs. the static DDDefaultLogLevel). This log level will only be checked, if the message passes the `DDDefaultLogLevel`.
-public var dynamicLogLevel = DDLogLevel.info
+public var dynamicLogLevel = DDLogLevel.verbose
 
 /// Resets the `dynamicLogLevel` to `.all`.
 /// - SeeAlso: `dynamicLogLevel`
@@ -250,8 +250,8 @@ open class CocoaMQTTLogger: NSObject {
                   lineNumber: Int = #line,
                   columnNumber: Int = #column) ->String {
             guard level.rawValue >= minLevel.rawValue else { return "" }
-                   
-            return("CocoaMQTT(\(level))> \(fileName) - \(functionName) at line \(lineNumber)[\(columnNumber)]: \(message)")
+
+            return("CocoaMQTT(\(level)): \(message)")
     }
     
     func debug(_ message: String) {
