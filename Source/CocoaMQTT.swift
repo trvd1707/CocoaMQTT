@@ -381,6 +381,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
     ///   - Bool: It indicates whether successfully calling socket connect function.
     ///           Not yet established correct MQTT session
     @objc public func connect() -> Bool {
+        printDebug("Received Connect request")
         return connect(timeout: -1)
     }
     
@@ -405,7 +406,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
                 guard let wself = self else { return }
                 wself.connState = .connecting
             }
-            
+            printDebug("Connect sent to socket with timeout \(timeout)")
             return true
         } catch let error as NSError {
             printError("socket connect error: \(error.description)")
