@@ -28,7 +28,7 @@ import CocoaLumberjack
 import CocoaLumberjackSwiftSupport
 #endif
 
-public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.verbose
+public var  DDDefaultLogLevel: DDLogLevel = DDLogLevel.info
 
 extension DDLogFlag {
     public static func from(_ logLevel: DDLogLevel) -> DDLogFlag {
@@ -62,7 +62,7 @@ extension DDLogFlag {
 }
 
 /// The log level that can dynamically limit log messages (vs. the static DDDefaultLogLevel). This log level will only be checked, if the message passes the `DDDefaultLogLevel`.
-public var dynamicLogLevel = DDLogLevel.verbose
+public var dynamicLogLevel = DDLogLevel.info
 
 /// Resets the `dynamicLogLevel` to `.all`.
 /// - SeeAlso: `dynamicLogLevel`
