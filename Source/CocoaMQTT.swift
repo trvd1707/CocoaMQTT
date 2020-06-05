@@ -410,6 +410,7 @@ public class CocoaMQTT: NSObject, CocoaMQTTClient {
             return true
         } catch let error as NSError {
             printError("socket connect error: \(error.description)")
+            Thread.callStackSymbols.forEach{printDebug("***\($0)")}
             return false
         }
     }
