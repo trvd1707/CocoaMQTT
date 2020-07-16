@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name        = "CocoaMQTTGW"
-  s.version     = "1.3.0-rc.1"
-  s.summary     = "MQTT v3.1.1 client library for iOS and OS X written with Swift 4 with changes to work as an SN gateway"
+  s.version     = "1.3.0-N"
+  s.summary     = "MQTT v3.1.1 client library for iOS and OS X written with Swift 5 with changes to work as an SN gateway"
   s.homepage    = "ssh://git@gitlab.com/nielsen-media/eng/mobile/mqttsn-gateway/ios/cocoamqttgw.git"
   s.license     = { :type => "MIT" }
   s.authors     = { "Feng Lee" => "feng@emqtt.io", "CrazyWisdom" => "zh.whong@gmail.com", "Alex Yu" => "alexyu.dc@gmail.com", "Teresa Van Dusen" => "teresa.vandusen@nielsen.com" }
@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = "10.0"
   s.tvos.deployment_target = "10.0"
   # s.watchos.deployment_target = "2.0"
-  s.source   = { :git => "https://gitlab.com/nielsen-media/eng/mobile/mqttsn-gateway/ios/cocoamqttgw.git", :tag => "1.3.0-rc.1"}
+  s.source   = { :git => "ssh://git@gitlab.com/nielsen-media/eng/mobile/mqttsn-gateway/ios/cocoamqttgw.git", :tag => "1.3.0-N"}
   s.default_subspec = 'Core'
   
   s.subspec 'Core' do |ss|
